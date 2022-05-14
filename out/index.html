@@ -2,10 +2,13 @@
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://unpkg.com/d3-dag@0.10.0"></script>
 
+<a>
 <div style="resize:both;border:2px solid;overflow:auto;padding:5px;">
 <svg style="width:100%;"></svg>
 </div>
+</a>
 <script type="module" async defer>
+    // Modified from https://codepen.io/brinkbot/pen/oNZJXqK
 (async () => {
   // fetch data and render
   const resp = await fetch(
@@ -109,6 +112,32 @@
     .attr("text-anchor", "middle")
     .attr("alignment-baseline", "middle")
     .attr("fill", "white");
+
+    save_as_svg();
 })();
+
+// Courtesy of https://stackoverflow.com/questions/23218174/how-do-i-save-export-an-svg-file-after-creating-an-svg-with-d3-js-ie-safari-an
+function save_as_svg(){
+
+
+        var svg_data = document.querySelector("svg").innerHTML //put id of your svg element here
+
+        var head = '<svg title="graph" version="1.1" xmlns="http://www.w3.org/2000/svg">'
+
+        //if you have some additional styling like graph edges put them inside <style> tag
+
+        var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
+
+        var full_svg = head +  style + svg_data + "</svg>"
+        var blob = new Blob([full_svg], {type: "image/svg+xml"});
+        const url=URL.createObjectURL(blob);
+        const a=document.querySelector("a");
+        a.href=url;
+        a.download="graph.svg";
+
+        //saveAs(blob, "graph.svg");
+
+
+};
 </script>
 </body>
