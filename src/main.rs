@@ -177,7 +177,7 @@ dotenv::dotenv().ok();
     let courses=Department::download_all().await?;
     let ser=serde_json::to_string(&courses).unwrap();
     //println!("{}",ser);
-    fs::write("out/courses.json",&ser).expect("Couldn't write");
+    fs::write("docs/courses.json",&ser).expect("Couldn't write");
     println!("Done. {} courses found.",courses.len());
     Ok(())
 }
