@@ -11,11 +11,14 @@
             padding-top:10px;
             padding-bottom:10px;
         }
+        body {
+            font-family:Georgia;
+        }
     </style>
 
-    <h1>Georgia Tech Undergrad CS</h1>
-    <p>See your computer science course prerequisites, so you can take <a href="https://catalog.gatech.edu/courses-undergrad/cs/">interesting high-level classes</a> ASAP.</p>
-    <p class="notif" id="ap">Haven't taken AP Computer Science (score 4 or 5)? Click <a href="?no-ap">here</a>.</p>
+    <h1>Georgia Tech CS - Undergrad Courses</h1>
+    <p class="notif">See your computer science course prerequisites, so you can take <a href="https://catalog.gatech.edu/courses-undergrad/cs/#:~:text=cs%204613.">cool high-level classes</a> ASAP.</p>
+    <p class="notif" id="ap">Have<span class="ap_nt">n't</span> taken AP Computer Science (score of 4 or 5)? Click <a id="ap_switch" href="?no-ap">here</a>.</p>
     <a id="viz">
         <div style="resize:both;border:2px solid;overflow:auto;padding:5px;">
             <svg style="width:100%;"></svg>
@@ -27,8 +30,10 @@
   // fetch data and render
 
   const noAp=new URLSearchParams(document.location.search).has("no-ap");
-  if(noAp)
-    document.querySelector("#ap").classList.add("white");
+  if(noAp){
+    document.querySelector(".ap_nt").innerText=" you";
+    document.querySelector("#ap_switch").href="?";
+  }
   const resp = await fetch(
     noAp?"noap_courses.json":"courses.json"
   );
@@ -135,7 +140,9 @@
     .attr("font-family", "sans-serif")
     .attr("text-anchor", "middle")
     .attr("alignment-baseline", "middle")
-    .attr("fill", "white"); 
+    .attr("fill", "white")
+    .append("svg:title")
+    .text(d=>d.data.name);
 
     save_as_svg();
 })();
