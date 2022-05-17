@@ -124,13 +124,18 @@
 
   // Add text to nodes
   nodes
+    .append("a")
+    .attr("href",(d)=>{
+        const search=encodeURIComponent(`CS ${d.data.id}. ${d.data.name}.`.toLowerCase());
+        return `https://catalog.gatech.edu/courses-undergrad/cs/#:~:text=${search}`
+    })
     .append("text")
     .text((d) => d.data.id)
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif")
     .attr("text-anchor", "middle")
     .attr("alignment-baseline", "middle")
-    .attr("fill", "white");
+    .attr("fill", "white"); 
 
     save_as_svg();
 })();
@@ -150,9 +155,11 @@ var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10p
 var full_svg = head +  style + svg_data + "</svg>"
         var blob = new Blob([full_svg], {type: "image/svg+xml"});
         const url=URL.createObjectURL(blob);
-        const a=document.querySelector("#viz");
-        a.href=url;
-        a.download="graph.svg";
+        if(false){
+            const a=document.querySelector("#viz");
+            a.href=url;
+            a.download="graph.svg";
+        }
 
         //saveAs(blob, "graph.svg");
 
