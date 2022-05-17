@@ -37,6 +37,15 @@ struct Department {
     courses:HashMap<usize,Course>
 }
 
+fn is_for_ap_students()->bool{
+    // This checks .env for HAS_AP. If true, we're making a list for AP CS takers.
+    match var("HAS_AP"){
+        Err(_)=>true,
+        Ok(st)=>st=="1"
+    }
+}
+
+
 impl Department {
     pub fn new()->Department {
         Department {
@@ -100,7 +109,7 @@ impl Department {
             )?;
         */
         let client=reqwest::Client::new();
-        let Resp {result:Res {organic_results:orgs}}=client.get("https://api.avesapi.com/search")
+        let resp=client.get("https://api.avesapi.com/search")
             .query(&[
                 ("apikey",&val[..]),
                 ("query",&query[..]),
@@ -109,8 +118,9 @@ impl Department {
                 ("type","web")
             ])
             .send()
-            .await?
-            .json()
+            .await?;
+
+        let Resp {result:Res {organic_results:orgs}}=resp.json()
             .await?;
         let urls=orgs.iter().map(|x|x.url.clone()).collect::<String>();
         let res:Option<OrgRes>=orgs.into_iter().find(|org|{
@@ -128,28 +138,39 @@ impl Department {
 
 
                 let prereq_pos=html.find("Prerequisites:");
+                let mut has_ap_cs=false;
+                let for_ap_students=is_for_ap_students();
                 let prereqs=match prereq_pos {
                     Some(pos)=>{
                         let substr=&html[pos..];
 
                         let cs_re=regex::Regex::new(r#"CS\s+(\d+)"#)?;
-                        cs_re
+                        let ret=cs_re
                             .captures_iter(substr)
                             .flat_map(|cap|{
                                 let num=cap.get(1);
                                 if let Some(num)=num {
                                     if let Ok(num)=num.as_str().to_string().parse::<usize>() {
+                                        if num==1301&&for_ap_students{
+                                            has_ap_cs=true;
+                                        }
                                         return Some(num)
                                     }
                                 }
                                 None
                             })
-                            .collect()
+                            .collect();
+                        if has_ap_cs {
+                            vec![]
+                        } else {
+                            ret
+                        }
                     }
                     None=>{
                         vec![]
                     }
                 };
+
 
                 let desc_re=regex::Regex::new(r#"<TD CLASS="ntdefault">\n(.*?)\n"#)?;
                 let captures=desc_re.captures(&html);
@@ -177,7 +198,8 @@ dotenv::dotenv().ok();
     let courses=Department::download_all().await?;
     let ser=serde_json::to_string(&courses).unwrap();
     //println!("{}",ser);
-    fs::write("docs/courses.json",&ser).expect("Couldn't write");
+    let filename=format!("docs/{}courses.json",if is_for_ap_students() {""} else {"noap_"});
+    fs::write(&filename,&ser).expect("Couldn't write");
     println!("Done. {} courses found.",courses.len());
     Ok(())
 }

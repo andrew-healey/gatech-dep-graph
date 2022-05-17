@@ -1,36 +1,55 @@
 <body>
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://unpkg.com/d3-dag@0.10.0"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-dag@0.10.0"></script>
 
-<a>
-<div style="resize:both;border:2px solid;overflow:auto;padding:5px;">
-<svg style="width:100%;"></svg>
-</div>
-</a>
-<script type="module" async defer>
-    // Modified from https://codepen.io/brinkbot/pen/oNZJXqK
-(async () => {
+    <style>
+        .white {
+            opacity:0;
+        }
+        .notif {
+            font-size:large;
+            padding-top:10px;
+            padding-bottom:10px;
+        }
+    </style>
+
+    <h1>Georgia Tech Undergrad CS</h1>
+    <p>See your computer science course prerequisites, so you can take interesting high-level classes ASAP.</p>
+    <p class="notif" id="ap">Haven't taken AP Computer Science (score 4 or 5)? Click <a href="?no-ap">here</a>.</p>
+    <a id="viz">
+        <div style="resize:both;border:2px solid;overflow:auto;padding:5px;">
+            <svg style="width:100%;"></svg>
+        </div>
+    </a>
+    <script type="module" async defer>
+        // Modified from https://codepen.io/brinkbot/pen/oNZJXqK
+        (async () => {
   // fetch data and render
+
+  const noAp=new URLSearchParams(document.location.search).has("no-ap");
+  if(noAp)
+    document.querySelector("#ap").classList.add("white");
   const resp = await fetch(
-    "courses.json"
+    noAp?"noap_courses.json":"courses.json"
   );
   const data = await resp.json();
   const deps=new Set(data.map(({prereqs})=>prereqs).flat());
   const filteredData=data.filter(({id,prereqs})=>deps.has(id)||prereqs.length);
   const ids=data.map(({id})=>id+"");
-  console.log(ids);
   const stratify=d3.dagStratify()
     .parentIds(({prereqs})=>prereqs.map(pre=>pre+"").filter(pre=>ids.includes(pre)))
     .id(({id})=>id+"");
   const dag = stratify(filteredData);
   const nodeRadius = 20;
   const layout = d3
-    //.grid()
+  /*
+    .grid()
+    .nodeSize([3*nodeRadius,nodeRadius])
+    */
     .sugiyama() // base layout
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
-    //.coord(d3.coordQuad())
-    //.decross(d3.decrossOpt().large("medium")) // minimize number of crossings
+    //.decross(d3.decrossOpt().large("large"))
     .nodeSize((node) => [(node ? 3.6 : 0.25) * nodeRadius, 3 * nodeRadius]); // set node size instead of constraining to fit
   const { width, height } = layout(dag);
 
@@ -126,18 +145,18 @@ function save_as_svg(){
 
         //if you have some additional styling like graph edges put them inside <style> tag
 
-        var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
+var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
 
-        var full_svg = head +  style + svg_data + "</svg>"
+var full_svg = head +  style + svg_data + "</svg>"
         var blob = new Blob([full_svg], {type: "image/svg+xml"});
         const url=URL.createObjectURL(blob);
-        const a=document.querySelector("a");
+        const a=document.querySelector("#viz");
         a.href=url;
         a.download="graph.svg";
 
         //saveAs(blob, "graph.svg");
 
 
-};
-</script>
+        };
+    </script>
 </body>
