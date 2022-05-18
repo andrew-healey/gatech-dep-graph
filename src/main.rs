@@ -1,8 +1,6 @@
 use std::env::{var};
-use std::collections::HashMap;
 use anyhow::{anyhow,Result};
 use futures::stream::{FuturesUnordered,StreamExt};
-use async_std::task;
 use serde::{Serialize,Deserialize};
 use std::fs;
 use dotenv;
@@ -34,31 +32,32 @@ struct Resp {
 
 #[derive(Serialize,Deserialize,Debug)]
 struct Department {
-    courses:HashMap<usize,Course>
-}
-
-fn is_for_ap_students()->bool{
-    // This checks .env for HAS_AP. If true, we're making a list for AP CS takers.
-    match var("HAS_AP"){
-        Err(_)=>true,
-        Ok(st)=>st=="1"
-    }
+    disp:String,
+    url:String,
+    search:String,
+    grad:bool
 }
 
 
 impl Department {
-    pub fn new()->Department {
+    pub fn new(disp:String,url:String,search:String,grad:bool)->Department {
         Department {
-            courses:HashMap::new()
+            disp,
+            url,
+            search,
+            grad
         }
     }
-    async fn download_all()->Result<Vec<Course>> {
-        let main_page=reqwest::get("https://catalog.gatech.edu/courses-undergrad/cs/")
+    async fn download_all(&self)->Result<Vec<Course>> {
+        let url=format!("https://catalog.gatech.edu/courses-{}/{}",if self.grad {"grad"}  else {"undergrad"},self.url);
+        let main_page=reqwest::get(&url)
             .await?
             .text()
             .await?;
 
-        let regex=regex::Regex::new(r#"CS\s+(\d+)\.\s+(.*?)\.\s+\d+\s+Credit"#)?;
+        let re_str=format!(r#"{}\s+(\d+)\.\s+(.*?)\.\s+\d+\s+Credit"#,&self.disp);
+        println!("Course name regex: {}",re_str);
+        let regex=regex::Regex::new(&re_str)?;
         let mut course_futures=FuturesUnordered::new();
         let iter=regex
             .captures_iter(&main_page);
@@ -69,7 +68,7 @@ impl Department {
                 let id:Result<usize,_>=id.as_str().to_string().parse();
                 if let Ok(id)=id {
                     if let Some(name)=name {
-                        course_futures.push(Department::get(id,name.as_str().to_string()));
+                        course_futures.push(self.get(id,name.as_str().to_string()));
                     }
                 }
             }
@@ -94,8 +93,9 @@ impl Department {
 
         Ok(courses)
     }
-    pub async fn get(id:usize,name:String)->Result<Course> {
-        let query=format!("georgia tech CS {} oscar",id);
+    pub async fn get(&self,id:usize,name:String)->Result<Course> {
+        let query=format!("georgia tech {} {} oscar",self.search,id);
+        println!("{}",query);
         let val=var("KEY").expect("No Aves API key found.");
         /*
         let (key,val)=vars()
@@ -124,7 +124,6 @@ impl Department {
             .await?;
         let urls=orgs.iter().map(|x|x.url.clone()).collect::<String>();
         let res:Option<OrgRes>=orgs.into_iter().find(|org|{
-            //&org.description[..7]==format!("CS {}",id) &&
             &org.url[..25]=="https://oscar.gatech.edu/"
         });
         match res {
@@ -138,33 +137,24 @@ impl Department {
 
 
                 let prereq_pos=html.find("Prerequisites:");
-                let mut has_ap_cs=false;
-                let for_ap_students=is_for_ap_students();
                 let prereqs=match prereq_pos {
                     Some(pos)=>{
                         let substr=&html[pos..];
 
-                        let cs_re=regex::Regex::new(r#"CS\s+(\d+)"#)?;
-                        let ret=cs_re
+                        let prereq_str=format!(r#"{}\s+(\d+)"#,self.disp);
+                        let cs_re=regex::Regex::new(&prereq_str)?;
+                        cs_re
                             .captures_iter(substr)
                             .flat_map(|cap|{
                                 let num=cap.get(1);
                                 if let Some(num)=num {
                                     if let Ok(num)=num.as_str().to_string().parse::<usize>() {
-                                        if num==1301&&for_ap_students{
-                                            has_ap_cs=true;
-                                        }
                                         return Some(num)
                                     }
                                 }
                                 None
                             })
-                            .collect();
-                        if has_ap_cs {
-                            vec![]
-                        } else {
-                            ret
-                        }
+                            .collect()
                     }
                     None=>{
                         vec![]
@@ -195,11 +185,13 @@ impl Department {
 #[tokio::main]
 async fn main()->Result<()> {
 dotenv::dotenv().ok();
-    let courses=Department::download_all().await?;
-    let ser=serde_json::to_string(&courses).unwrap();
-    //println!("{}",ser);
-    let filename=format!("docs/{}courses.json",if is_for_ap_students() {""} else {"noap_"});
+    let cs_dept=Department::new("CS".to_string(),"cs".to_string(),"cs".to_string(),false);
+    let courses=cs_dept.download_all().await?;
+    let ser=serde_json::to_string(&(&courses,&cs_dept)).unwrap();
+
+    let filename=format!("docs/courses.json");
     fs::write(&filename,&ser).expect("Couldn't write");
+
     println!("Done. {} courses found.",courses.len());
     Ok(())
 }
