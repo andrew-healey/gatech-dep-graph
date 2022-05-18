@@ -116,7 +116,7 @@ if(!hasAp){
     nodes
         .append("a")
         .attr("href",(d)=>{
-            const search=encodeURIComponent(`${dept} ${d.data.id}. ${d.data.name}.`.toLowerCase());
+            const search=encodeURIComponent(`${disp} ${d.data.id}. ${d.data.name}.`.toLowerCase());
             return `https://catalog.gatech.edu/courses-${grad?"grad":"undergrad"}/${url}/#:~:text=${search}`
         })
         .append("text")

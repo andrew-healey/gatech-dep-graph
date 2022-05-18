@@ -185,7 +185,7 @@ impl Department {
 #[tokio::main]
 async fn main()->Result<()> {
 dotenv::dotenv().ok();
-    let cs_dept=Department::new("CS".to_string(),"cs".to_string(),"cs".to_string(),false);
+    let cs_dept=Department::new("MATH".to_string(),"math".to_string(),"math".to_string(),false);
     let courses=cs_dept.download_all().await?;
     let ser=serde_json::to_string(&(&courses,&cs_dept)).unwrap();
 
